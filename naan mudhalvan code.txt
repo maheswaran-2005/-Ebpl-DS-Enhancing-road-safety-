@@ -1,0 +1,79 @@
+# train_model.py
+
+# Step 1: Import Libraries
+import pandas as pd
+import numpy as np
+import time
+import joblib
+import warnings
+import os
+
+from sklearn.model_selection import train_test_split
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.metrics import accuracy_score, classification_report, confusion_matrix
+
+warnings.filterwarnings("ignore")
+
+def main():
+    print("🚦 Road Safety Accident Prediction Training Script")
+
+    # Step 2: Load Dataset
+    DATA_PATH = 'dataset_traffic_accident_prediction1.csv'
+    if not os.path.exists(DATA_PATH):
+        raise FileNotFoundError(f"❌ Dataset not found at {DATA_PATH}. Please ensure the CSV file is in the project directory.")
+
+    df = pd.read_csv(DATA_PATH)
+    print("✅ Dataset loaded successfully.")
+    print("📏 Dataset shape:", df.shape)
+
+    # Step 3: Handle Missing Values
+    if 'Accident' not in df.columns:
+        raise ValueError("❌ 'Accident' column is missing from the dataset.")
+
+    df.dropna(subset=['Accident'], inplace=True)
+    df.fillna(method='ffill', inplace=True)
+    print("✅ Missing values handled.")
+
+    # Step 4: Encode Categorical Variables
+    categorical_cols = [
+        'Weather', 'Road_Type', 'Time_of_Day', 'Accident_Severity',
+        'Road_Condition', 'Vehicle_Type', 'Road_Light_Condition'
+    ]
+    existing_cats = [col for col in categorical_cols if col in df.columns]
+    df = pd.get_dummies(df, columns=existing_cats, drop_first=True)
+    print(f"✅ Categorical columns encoded: {existing_cats}")
+
+    # Step 5: Define Features and Target
+    if 'Accident' not in df.columns:
+        raise ValueError("❌ Column 'Accident' must be present after preprocessing.")
+
+    X = df.drop('Accident', axis=1)
+    y = df['Accident']
+    print(f"🧠 Feature columns: {X.columns.tolist()}")
+
+    # Step 6: Train/Test Split
+    X_train, X_test, y_train, y_test = train_test_split(
+        X, y, test_size=0.2, random_state=42
+    )
+    print(f"✅ Split: {len(X_train)} train / {len(X_test)} test samples.")
+
+    # Step 7: Train Model
+    print("🚀 Training RandomForestClassifier...")
+    start = time.time()
+    model = RandomForestClassifier(n_estimators=100, random_state=42)
+    model.fit(X_train, y_train)
+    duration = round(time.time() - start, 2)
+    print(f"✅ Training completed in {duration} seconds.")
+
+    # Step 8: Evaluate Model
+    y_pred = model.predict(X_test)
+    print(f"\n🎯 Accuracy: {accuracy_score(y_test, y_pred):.2f}")
+    print("\n📊 Classification Report:\n", classification_report(y_test, y_pred))
+    print("📉 Confusion Matrix:\n", confusion_matrix(y_test, y_pred))
+
+    # Step 9: Save Model
+    joblib.dump(model, 'accident_predictor.pkl')
+    print("💾 Model saved as 'accident_predictor.pkl'")
+
+if __name__ == "__main__":
+    main()
